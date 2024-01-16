@@ -268,320 +268,367 @@ create table tbl_file(
 drop table tbl_file;
 drop table tbl_user;
 
-use test;
 show tables;
 
 
-
-/*  문제1
-    1. 요구사항
+/*
+    요구사항
 
     학사 관리 시스템에 학생과 교수, 과목을 관리합니다.
-    학생은 학번, 이름, 전공 학년이 필요하고
+    학생은 학번, 이름, 전공, 학년이 필요하고
     교수는 교수 번호, 이름, 전공, 직위가 필요합니다.
     과목은 고유한 과목 번호와 과목명, 학점이 필요합니다.
     학생은 여러 과목을 수강할 수 있으며,
     교수는 여러 과목을 강의할 수 있습니다.
     학생이 수강한 과목은 성적(점수)이 모두 기록됩니다.
+*/
+    create table tbl_student(
+        id bigint auto_increment primary key,
+        name varchar(255) not null,
+        major varchar(255) not null,
+        grade int default 1
+    );
 
-    3. 논리적 설계
-        학생      교수      과목          학사 시스템
-        학번PK    번호PK    번호PK        학생 학번FK
-        이름NN    이름NN    학생 학번FK    교수 번호FK
-        전공NN    전공NN    교수 번호FK    과목 번호FK
-        학년D=1   직위NN    학점D=0       성적
-                           과목명NN
+    create table tbl_professor(
+        id bigint auto_increment primary key,
+        name varchar(255) not null,
+        major varchar(255) not null,
+        position varchar(255) not null
+    );
 
+    create table tbl_subject(
+        id bigint auto_increment primary key,
+        name varchar(255) not null,
+        score int default 0
+    );
+
+
+    /*
+        학생 : 과목 = N : N의 관계이다.
+        student_subject 테이블은 학생이 수강한 과목의 성적이 등록되게한다.
+        학사 정보 시스템에서는 학생의 정보, 과목 정보, 교수의 정보 모두가 있어야하므로
+        FK로 받는다.
+    */
+    create table tbl_student_subject(
+        id bigint auto_increment primary key,
+        grade varchar(255),
+        status varchar(255) default '수강중',
+        student_id bigint not null,
+        subject_id bigint not null,
+        professor_id bigint not null,
+        constraint check_status check (status in('수강중', '수강완료')),
+        constraint fk_student_subject_student foreign key (student_id)
+                                    references tbl_student(id),
+        constraint fk_student_subject_subject foreign key (subject_id)
+                                    references tbl_subject(id),
+        constraint fk_student_subject_professor foreign key (professor_id)
+                                    references tbl_professor(id)
+    );
+
+/*
+    check를 사용하면 원하는 컬럼에 조건식(or연산)을 사용할 수 있다.
+    check([컬럼명] in ([조건1], [조건2], ...))
+    in절 뒤의 조건들 중, 하나의 값이 들어가면 True!
 */
 
-create table tbl_student(
-    id bigint primary key,
-    name varchar(255) not null,
-    major varchar(255) not null,
-    grade int default 1
-);
+    create table tbl_lecture(
+        id bigint auto_increment primary key,
+        professor_id bigint not null,
+        subject_id bigint not null,
+        constraint fk_lecture_professor foreign key(professor_id)
+                            references tbl_professor(id),
+        constraint fk_lecture_subject foreign key(subject_id)
+                            references tbl_subject(id)
+    );
 
-create table tbl_professor(
-    id bigint primary key,
-    name varchar(255) not null,
-    major varchar(255) not null,
-    job_position varchar(255) not null
-);
-
-create table tbl_subject(
-    id bigint primary key,
-    name varchar(255) not null unique,
-    credit int default 0,
-    student_id bigint,
-    professor_id bigint,
-    constraint fk_subject_student foreign key(student_id)
-                        references tbl_student(id),
-    constraint fk_subject_professor foreign key(professor_id)
-                        references tbl_professor(id)
-);
-
-create table tbl_school_system(
-    score decimal(2, 1) default 0,
-    student_id bigint,
-    professor_id bigint,
-    subject_id bigint,
-    constraint fk_school_system_student foreign key(student_id)
-                   references tbl_student(id),
-    constraint fk_school_system_professor foreign key(professor_id)
-                   references tbl_professor(id),
-    constraint fk_school_system_subject foreign key(subject_id)
-                   references tbl_subject(id)
-);
-
-
-/*alter table school_system rename tbl_school_system;*/
-show tables;
-
-/*  문제2
-    1. 요구사항
+/*
+    요구사항
 
     대카테고리, 소카테고리가 필요해요.
-    2.
-    3. 논리적 설계
-        대카테고리          소카테고리
-        카테고리 번호PK     상품 번호PK
-        카테고리 이름NN     상품 이름NN
-                           상품 가격D=0
-                           상품의 종류(카테고리 번호)FK
 */
-create table tbl_big_category(
-    id bigint primary key,
-    name varchar(255) not null
-);
+    create table tbl_category_A(
+        id bigint auto_increment primary key,
+        name varchar(255) not null
+    );
 
-create table tbl_small_category(
-    id bigint primary key,
-    name varchar(255) not null,
-    price int default 0,
-    category_id bigint,
-    constraint fk_small_category_big_category foreign key(category_id)
-                           references tbl_big_category(id)
-);
+    create table tbl_category_B(
+        id bigint auto_increment primary key,
+        name varchar(255) not null,
+        category_A_id bigint not null,
+        constraint fk_category_B_category_A foreign key(category_A_id)
+                               references tbl_category_A(id)
+    );
 
-show tables;
-
-/*  문제3
-    1. 요구 사항
+/*
+    요구 사항
 
     회의실 예약 서비스를 제작하고 싶습니다.
     회원별로 등급이 존재하고 사무실마다 회의실이 여러 개 있습니다.
     회의실 이용 가능 시간은 파트 타임으로서 여러 시간대가 존재합니다.
 
-    2.
-    3. 논리적  설계
-        회원          사무실         회의실         시간대         예약
-        번호PK        번호PK        번호PK          번호PK         번호PK
-        아이디NN,U     이름NN        이름NN        시작시간NN      날짜NN
-        비밀번호NN     주소NN         주소NN        종료시간NN     회원번호FK
-        이름NN        전화번호NN      사무실번호FK                 시간번호FK
-        주소NN                                                   회의실번호FK
-        이메일
-        생일
 */
 create table tbl_user(
-    id bigint primary key,
-    user_id varchar(255) not null unique,
+    id varchar(255) primary key,
     password varchar(255) not null,
     name varchar(255) not null,
     address varchar(255) not null,
     email varchar(255),
-    birth date
+    birth date,
+    level varchar(255) default '기본',
+    constraint check_level check ( level in ('기본', '단골') )
 );
+
 create table tbl_office(
-    id bigint primary key,
+    id bigint auto_increment primary key,
     name varchar(255) not null,
-    address varchar(255) not null,
-    phone varchar(255) not null
+    location varchar(255) not null
 );
-create table tbl_meeting_room(
-    id bigint primary key,
-    address varchar(255) not null,
-    office_id bigint,
-    constraint fk_meeting_room_office foreign key(office_id)
-                             references tbl_office(id)
+
+create table tbl_conference_room(
+    id bigint auto_increment primary key,
+    office_id bigint not null,
+    constraint fk_conference_room_office foreign key(office_id)
+                                references tbl_office(id)
 );
-create table tbl_time(
-    id bigint primary key,
-    start_time time not null,
-    end_time time not null
+
+create table tbl_part_time(
+    id bigint auto_increment primary key,
+    time time not null,
+    conference_room_id bigint not null,
+    constraint fk_part_time_conference_room foreign key(conference_room_id)
+                                references tbl_conference_room(id)
 );
+
 create table tbl_reservation(
-    id bigint primary key,
-    reservation_time timestamp not null,
-    user_id bigint,
-    meeting_room_id bigint,
-    time_id bigint,
-    constraint fk_reservation_user foreign key(user_id)
+    id bigint auto_increment primary key,
+    time time not null,
+    created_date datetime default (current_timestamp),
+    user_id varchar(255) not null,
+    conference_room_id bigint not null,
+    constraint fk_reservation_user foreign key (user_id)
                             references tbl_user(id),
-    constraint fk_reservation_meeting_room foreign key(meeting_room_id)
-                            references tbl_meeting_room(id),
-    constraint fk_reservation_time foreign key(time_id)
-                            references tbl_time(id)
+    constraint fk_reservation_conference_room foreign key (conference_room_id)
+                            references tbl_conference_room(id)
 );
 
-show tables;
 
-/*  문제4
+/*
     요구사항
 
     유치원을 하려고 하는데, 아이들이 체험학습 프로그램을 신청해야 합니다.
     아이들 정보는 이름, 나이, 성별이 필요하고 학부모는 이름, 나이, 주소, 전화번호, 성별이 필요해요
     체험학습은 체험학습 제목, 체험학습 내용, 이벤트 이미지 여러 장이 필요합니다.
     아이들은 여러 번 체험학습에 등록할 수 있어요.
-
-    논리적 설계
-        아이          학부모         체험학습        이미지
-        번호PK        번호PK        번호PK          번호PK
-        이름NN        이름NN        제목NN          경로
-        나이D=5       나이D=35      내용NN          이름
-        성별D='남'    주소NN        아이 번호FK     체험학습번호FK
-        학부모번호FK   전화번호NN
-                      성별D='남'
-
-
 */
 create table tbl_parent(
-    id bigint primary key,
+    id bigint auto_increment primary key,
     name varchar(255) not null,
-    age int default 35,
+    age tinyint default 1,
+    gender varchar(255) not null,
     address varchar(255) not null,
     phone varchar(255) not null,
-    gender varchar(255) default '남자'
+    constraint check_gender check ( gender in ('선택안함', '여자', '남자') )
 );
+
 create table tbl_child(
-    id bigint primary key,
+    id bigint auto_increment primary key,
     name varchar(255) not null,
-    age int default 5,
-    gender varchar(255) default '남자',
-    parent_id bigint,
-    constraint fk_child_parent foreign key(parent_id)
+    age tinyint default 1,
+    gender varchar(255) not null,
+    parent_id bigint not null,
+    constraint check_child_gender check ( gender in ('선택안함', '여자', '남자') ),
+    constraint fk_child_parent foreign key (parent_id)
                       references tbl_parent(id)
 );
-create table tbl_outside_study(
-    id bigint primary key,
+
+create table tbl_field_trip(
+    id bigint auto_increment primary key,
     title varchar(255) not null,
     content varchar(255) not null,
-    child_id bigint,
-    constraint fk_outside_study_child foreign key(child_id)
-                              references tbl_child(id)
+    count tinyint default 0
 );
 
-create table tbl_image(
+/*
+    DDL에서는 여러 번 사용되는 컬럼의 경우, 파이썬에서의 '상속'의 기능처럼
+    슈퍼키(부모의 PK)와 서브키(부모의 PK를 FK로 받아서 자식의 PK로 설정)를 사용할 수 있다.
+    아래의 코드에서는 이미지파일이 각 게시글마다 여러개 들어있기 때문에,
+    반복적으로 사용되는 파일경로와, 파일이름은 tbl_file이라는 테이블로 따로 만들어서 사용하였다.
+*/
+
+create table tbl_file(
+    /* 슈퍼키 */
+    id bigint auto_increment primary key,
+    file_path varchar(255) not null,
+    file_name varchar(255) not null
+);
+
+create table tbl_field_trip_file(
+    /* 서브키 */
     id bigint primary key,
-    image_path varchar(255) default '/upload/',
-    image_name varchar(255),
-    outside_study_id bigint,
-    constraint fk_image_outside_study foreign key (outside_study_id)
-                      references tbl_outside_study(id)
+    field_trip_id bigint not null,
+    constraint fk_field_trip_file_file foreign key (id)
+    references tbl_file(id),
+    constraint fk_field_trip_file_field_trip foreign key (field_trip_id)
+    references tbl_field_trip(id)
 );
 
-show tables;
+create table tbl_apply(
+    id bigint auto_increment primary key,
+    child_id bigint not null,
+    field_trip_id bigint not null,
+    constraint fk_apply_child foreign key (child_id)
+    references tbl_child(id),
+    constraint fk_apply_field_trip foreign key (field_trip_id)
+    references tbl_field_trip(id)
+);
 
-
-/*  문제5
+/*
     요구사항
 
-   안녕하세요, 광고 회사를 운영하려고 준비중인 사업가입니다.
+    안녕하세요, 광고 회사를 운영하려고 준비중인 사업가입니다.
     광고주는 기업이고 기업 정보는 이름, 주소, 대표번호, 기업종류(스타트업, 중소기업, 중견기업, 대기업)입니다.
     광고는 제목, 내용이 있고 기업은 여러 광고를 신청할 수 있습니다.
     기업이 광고를 선택할 때에는 카테고리로 선택하며, 대카테고리, 중카테고리, 소카테고리가 있습니다.
-
-    논리적 설계
-        기업          광고          카테고리
-        번호PK        번호PK        번호PK
-        이름NN        제목NN        대
-        주소NN        내용NN        중
-        대표번호NN    기업번호FK     소
-        종류D=중소                  광고번호FK
 */
+create table tbl_company_type(
+    id bigint auto_increment primary key,
+    type varchar(255)
+);
+
 create table tbl_company(
-    id bigint primary key,
+    id bigint auto_increment primary key,
     name varchar(255) not null,
     address varchar(255) not null,
-    phone varchar(20) not null,
-    type varchar(255) not null
+    company_type_id bigint,
+    constraint fk_company_company_type foreign key (company_type_id)
+                        references tbl_company_type(id)
 );
+
+/*
+    대,중,소 카테고리는 각각 하나의 테이블로 만든다.
+    중카테고리는 대카테고리의 id를 FK값으로 받으며,
+    소카테고리는 중카테고리의 id를 FK값으로 받는다.
+*/
+
+create table tbl_ad_category_A(
+    id bigint auto_increment primary key,
+    name varchar(255) not null
+);
+
+create table tbl_ad_category_B(
+    id bigint auto_increment primary key,
+    name varchar(255) not null,
+    ad_category_A_id bigint not null,
+    constraint fk_ad_category_B_ad_category_A foreign key (ad_category_A_id)
+                           references tbl_ad_category_A(id)
+);
+
+create table tbl_ad_category_C(
+    id bigint auto_increment primary key,
+    name varchar(255) not null,
+    ad_category_B_id bigint not null,
+    constraint fk_ad_category_C_ad_category_B foreign key (ad_category_B_id)
+                           references tbl_ad_category_B(id)
+);
+
+
 create table tbl_advertisement(
-    id bigint primary key,
+    id bigint auto_increment primary key,
     title varchar(255) not null,
     content varchar(255) not null,
-    company_id bigint,
-    constraint fk_advertisement_company foreign key(company_id)
-                              references tbl_company(id)
-);
-create table tbl_category(
-    id bigint primary key,
-    big_category varchar(255) not null,
-    middle_category varchar(255) not null,
-    small_category varchar(255) not null,
-    advertisement_id bigint,
-    constraint fk_category_advertisement foreign key(advertisement_id)
-                         references tbl_advertisement(id)
+    ad_category_C_id bigint not null,
+    constraint fk_advertisement_ad_category_C foreign key (ad_category_C_id)
+                           references tbl_ad_category_C(id)
 );
 
-show tables;
+/*
+    [컬럼명] datetime default current_timestamp on update current_timestamp
+    위의 코드 사용 시, 업데이트(수정)될 때마다 시간을 변경할 필요 없이
+    업데이트 할때의 시간을 받아, 그 시간으로 자동으로 수정해준다.
+*/
+
+create table tbl_ad_apply(
+    id bigint auto_increment primary key,
+    company_id bigint not null,
+    advertisement_id bigint not null,
+    created_date datetime default current_timestamp,
+    updated_date datetime default current_timestamp on update current_timestamp,
+    constraint fk_apply_company foreign key (company_id)
+                           references tbl_company(id),
+    constraint fk_apply_advertisement foreign key (advertisement_id)
+                           references tbl_advertisement(id)
+);
 
 
-
-/*  문제6
+/*
     요구사항
 
     음료수 판매 업체입니다. 음료수마다 당첨번호가 있습니다.
     음료수의 당첨번호는 1개이고 당첨자의 정보를 알아야 상품을 배송할 수 있습니다.
     당첨 번호마다 당첨 상품이 있고, 당첨 상품이 배송 중인지 배송 완료인지 구분해야 합니다.
-
-    논리적 설계
-        음료수         당첨자         배송             상품
-        번호PK        번호PK        번호PK             번호PK
-        당첨번호NN     이름NN        배송상태 D=NO      이름NN
-        당첨자번호FK   전화번호NN    음료번호FK          음료번호FK
-                      주소NN       당첨자번호FK
-
 */
-create table tbl_winner(
-    id bigint primary key,
+create table tbl_member(
+    id varchar(255) primary key,
+    password varchar(255) not null,
     name varchar(255) not null,
-    phone varchar(20) not null,
-    address varchar(20) not null
+    address varchar(255) not null,
+    email varchar(255),
+    birth date
 );
 
-create table tbl_drink(
-    id bigint primary key,
-    lucky_number bigint unique,
-    winner_id bigint,
-    constraint fk_drink_winner foreign key(winner_id)
-                            references tbl_winner(id)
+create table tbl_soft_drink(
+    id bigint auto_increment primary key,
+    name varchar(255) not null,
+    price int default 0
 );
 
-create table tbl_winner_goods(
-    id bigint primary key,
-    name varchar(255) not null,
-    winner_id bigint,
-    constraint fk_winner_goods_winner foreign key(winner_id)
-                             references tbl_winner(id)
+create table tbl_product(
+    id bigint auto_increment primary key,
+    name varchar(255) not null
+);
+
+/*
+    로또 번호는 null값이 존재하면 안되기 때문에 not null이라는 제약조건이 필요하지만,
+    상품id는 null값이 가능하다.
+*/
+
+create table tbl_lottery(
+    id bigint auto_increment primary key,
+    number varchar(255) not null,
+    product_id bigint,
+    constraint fk_lottery_product foreign key (product_id)
+                        references tbl_product(id)
+);
+
+/*
+    상품에 로또 번호를 적어 생산하는 테이블.
+    음료의 정보와 당첨상품과 그에 해당하는 당첨번호가 저장되어있는 테이블의 정보를 가져온다.
+*/
+
+create table tbl_circulation(
+    id bigint auto_increment primary key,
+    soft_drink_id bigint not null,
+    lottery_id bigint not null,
+    constraint fk_circulation_soft_drink foreign key (soft_drink_id)
+                            references tbl_soft_drink(id),
+    constraint fk_circulation_lottery foreign key (lottery_id)
+                            references tbl_lottery(id)
 );
 
 create table tbl_delivery(
-    id bigint primary key,
-    is_complete varchar(255) default 'NO',
-    winner_goods_id bigint,
-    winner_id bigint,
-    constraint fk_delivery_winner_goods foreign key(winner_goods_id)
-                         references tbl_drink(id),
-    constraint fk_delivery_winner foreign key(winner_id)
-                         references tbl_winner(id)
+    id bigint auto_increment primary key,
+    status varchar(255),
+    member_id varchar(255) not null,
+    product_id bigint not null,
+    constraint check_delivery_status check ( status in ('상품준비중', '배송중', '배송완료') ),
+    constraint fk_delivery_member foreign key (member_id)
+                         references tbl_member(id),
+    constraint fk_delivery_product foreign key (product_id)
+                         references tbl_product(id)
 );
 
 
-show tables;
-
-
-/*  문제7
+/*
     요구사항
 
     이커머스 창업 준비중입니다. 기업과 사용자 간 거래를 위해 기업의 정보와 사용자 정보가 필요합니다.
@@ -589,64 +636,87 @@ show tables;
     사용자 정보는 이름, 주소, 전화번호가 있습니다. 결제 시 사용자 정보와 기업의 정보, 결제한 카드의 정보 모두 필요하며,
     상품의 정보도 필요합니다. 상품의 정보는 이름, 가격, 재고입니다.
     사용자는 등록한 카드의 정보를 저장할 수 있으며, 카드의 정보는 카드번호, 카드사, 회원 정보가 필요합니다.
-
-    논리적 설계
-        기업          구매자         카드          상품          결제
-        번호pk        번호PK        번호PK         번호PK       번호PK
-        이름NN        이름NN        카드번호NN,U    이름NN       사용자번호FK
-        주소NN        주소NN        카드사NN       가격D=0       기업번호FK
-        대표번호NN    전화번호NN     회원번호FK     재고D=0       카드번호FK
-                                                 사용자번호FK   상품번호FK
-
 */
-
-create table tbl_companies(
-    id bigint primary key,
+create table tbl_corporation(
+    id bigint auto_increment primary key,
     name varchar(255) not null,
     address varchar(255) not null,
-    phone varchar(20) not null
+    tel varchar(255) not null
 );
 
-create table tbl_purchaser(
-    id bigint primary key,
+create table tbl_client(
+    id varchar(255) primary key,
+    password varchar(255) not null,
     name varchar(255) not null,
     address varchar(255) not null,
-    phone varchar(20) not null
+    email varchar(255),
+    birth date
 );
 
 create table tbl_card(
-    id bigint primary key,
-    number varchar(30) not null,
-    card_brand varchar(255) not null,
-    purchaser_id bigint,
-    constraint fk_card_purchaser foreign key(purchaser_id)
-                     references tbl_purchaser(id)
+    id bigint auto_increment primary key,
+    number varchar(255) not null,
+    company varchar(255) not null,
+    client_id varchar(255) not null,
+    constraint fk_card_client foreign key (client_id)
+                     references tbl_client(id)
 );
-create table tbl_goods(
-    id bigint primary key,
+
+create table tbl_item(
+    id bigint auto_increment primary key,
     name varchar(255) not null,
     price int default 0,
     stock int default 0,
-    purchaser_id bigint,
-    constraint fk_goods_purchaser foreign key(purchaser_id)
-                      references tbl_purchaser(id)
+    corporation_id bigint not null,
+    constraint fk_item_corporation foreign key (corporation_id)
+                     references tbl_corporation(id)
 );
+
+/*
+    sequence 테이블의 sequence 컬럼은 12시마다 0으로 초기화된다.
+    즉, 해당 주문이 몇 번째 주문인지를 알려준다.
+    ex) 1/6일의 3번째 주문이라면, 해당주문번호는: 0116/'3' -> sequence = 3
+    1/6일의 10번째 주문이라면, 해당주문번호는: 0116/'10'.. -> sequence = 10
+*/
+
+create table tbl_sequence(
+    id bigint auto_increment primary key,
+    sequence bigint default 0
+);
+
+/*
+    order 테이블에서는 주문된 날짜를 받는 created_date컬럼과
+    몇 번째 주문인지 알기위한 id컬럼을 만든다. 이 테이블의 id컬럼에는 sequence테이블의 sequence컬럼에있는 데이터를 받을 것이다.
+    또한 이 둘을 PK로 설정함으로써, 해당 주문번호의 중복은 불가능해졌다.
+*/
+
 create table tbl_order(
-    id bigint primary key,
-    purchaser_id bigint,
-    companies_id bigint,
-    card_id bigint,
-    goods_id bigint,
-    constraint fk_order_purchaser foreign key(purchaser_id)
-                     references tbl_purchaser(id),
-    constraint fk_order_companies foreign key(companies_id)
-                     references tbl_companies(id),
-    constraint fk_order_goods foreign key(goods_id)
-                     references tbl_goods(id)
+    id bigint,
+    created_date date default (current_date),
+    primary key (id, created_date)
 );
 
-show tables;
+create table tbl_order_item(
+    id bigint auto_increment primary key,
+    order_id bigint,
+    order_created_date date,
+    item_id bigint,
+    constraint fk_order_item_order foreign key (order_id, order_created_date)
+                              references tbl_order(id, created_date),
+    constraint fk_order_item_product foreign key (item_id)
+                              references tbl_item(id)
+);
 
+create table tbl_pay(
+    id bigint auto_increment primary key,
+    order_id bigint,
+    order_created_date date,
+    card_id bigint,
+    constraint fk_pay_order foreign key (order_id, order_created_date)
+                              references tbl_order(id, created_date),
+    constraint fk_pay_card foreign key (card_id)
+                    references tbl_card(id)
+);
 
 
 
